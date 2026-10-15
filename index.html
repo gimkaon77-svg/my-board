@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 아카라이브 - Gemini Dark</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gemini: {
+                            bg: '#131314',       // 메인 바탕색 (Gemini Dark)
+                            card: '#1e1f20',     // 카드/컨테이너 배경색
+                            hover: '#282a2c',    // 호버/선택 상태
+                            border: '#333537',   // 테두리
+                            accent: '#a8c7fa',   // 포인트 액센트 블루
+                            textMuted: '#9aa0a6' // 보조 텍스트
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gemini-bg text-gray-800 dark:text-gray-100 min-h-screen transition-colors duration-200">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-30 bg-white dark:bg-gemini-card border-b border-gray-200 dark:border-gemini-border shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('list')">
+                <div class="bg-blue-600 dark:bg-gemini-accent dark:text-gray-900 text-white font-bold p-1.5 rounded-lg text-lg leading-none">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">MyArca <span class="text-xs font-normal text-gray-500 dark:text-gemini-textMuted border border-gray-300 dark:border-gemini-border px-1.5 py-0.5 rounded">개인용</span></h1>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <!-- Write Post Button -->
+                <button onclick="openWriteModal()" class="bg-blue-600 hover:bg-blue-700 dark:bg-gemini-accent dark:hover:bg-blue-300 text-white dark:text-gray-900 px-3.5 py-1.5 rounded-md font-medium text-sm transition flex items-center shadow-sm">
+                    <i class="fa-solid fa-pen-to-square mr-1.5"></i> 글쓰기
+                </button>
+                <!-- Dark mode toggle -->
+                <button onclick="toggleDarkMode()" class="p-2 rounded-md text-gray-500 dark:text-gemini-textMuted hover:bg-gray-100 dark:hover:bg-gemini-hover text-sm">
+                    <i id="themeIcon" class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 py-6">
+
+        <!-- VIEW 1: POST LIST (HOME) -->
+        <section id="listView" class="space-y-4">
+            <!-- Top Controls (Category Tabs + Search Bar) -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-white dark:bg-gemini-card p-3 rounded-lg border border-gray-200 dark:border-gemini-border shadow-sm">
+                <!-- Categories -->
+                <div class="flex items-center space-x-1 overflow-x-auto hide-scrollbar pb-1 sm:pb-0" id="categoryTabs">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Search -->
+                <div class="relative min-w-[200px]">
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="제목 또는 내용 검색..." 
+                        class="w-full pl-9 pr-3 py-1.5 text-sm rounded-md bg-gray-50 dark:bg-gemini-bg border border-gray-300 dark:border-gemini-border focus:outline-none focus:border-blue-500 dark:focus:border-gemini-accent">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 dark:text-gemini-textMuted text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Posts Counter & Notice -->
+            <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gemini-textMuted px-1">
+                <span>총 <strong id="postCount" class="text-blue-600 dark:text-gemini-accent">0</strong>개의 게시물</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-shield-halved text-green-500"></i> 모든 미디어 및 데이터는 내 브라우저에 안전하게 보관됩니다.</span>
+            </div>
+
+            <!-- Posts Board Table / List -->
+            <div class="bg-white dark:bg-gemini-card rounded-lg border border-gray-200 dark:border-gemini-border overflow-hidden shadow-sm">
+                <div id="postsList" class="divide-y divide-gray-100 dark:divide-gemini-border">
+                    <!-- Post items will be injected here -->
+                </div>
+                <!-- Empty State -->
+                <div id="emptyState" class="hidden py-16 text-center text-gray-400 dark:text-gemini-textMuted">
+                    <i class="fa-regular fa-folder-open text-4xl mb-3 block"></i>
+                    <p class="text-sm">게시글이 없습니다. 첫 번째 글을 작성해보세요!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: POST DETAIL VIEW -->
+        <section id="detailView" class="hidden space-y-4">
+            <div class="flex justify-between items-center">
+                <button onclick="showView('list')" class="text-sm font-medium text-gray-600 dark:text-gemini-textMuted hover:text-blue-600 dark:hover:text-gemini-accent flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-left"></i> 목록으로 돌아가기
+                </button>
+                <div class="flex space-x-2">
+                    <button onclick="editCurrentPost()" class="text-xs bg-gray-200 dark:bg-gemini-hover hover:bg-gray-300 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded transition">
+                        <i class="fa-solid fa-pen mr-1"></i> 수정
+                    </button>
+                    <button onclick="deleteCurrentPost()" class="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded transition">
+                        <i class="fa-solid fa-trash mr-1"></i> 삭제
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detail Article Card -->
+            <article class="bg-white dark:bg-gemini-card rounded-lg border border-gray-200 dark:border-gemini-border p-5 sm:p-6 shadow-sm">
+                <!-- Header Info -->
+                <div class="border-b border-gray-100 dark:border-gemini-border pb-4 mb-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span id="detailCategory" class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-600 dark:bg-gemini-hover dark:text-gemini-accent border border-blue-200 dark:border-gemini-border">카테고리</span>
+                        <span id="detailDate" class="text-xs text-gray-400 dark:text-gemini-textMuted">2026-10-16 00:00</span>
+                    </div>
+                    <h2 id="detailTitle" class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-snug">게시글 제목</h2>
+                </div>
+
+                <!-- Text Body -->
+                <div id="detailContent" class="prose dark:prose-invert max-w-none text-sm sm:text-base whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed mb-6">
+                    게시글 본문 내용이 출력됩니다.
+                </div>
+
+                <!-- Attached Media Gallery (Images & Videos) -->
+                <div id="detailMediaContainer" class="space-y-4 my-6">
+                    <!-- Dynamic Media Stack -->
+                </div>
+
+                <!-- Self Comment Section -->
+                <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gemini-border">
+                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                        <i class="fa-regular fa-comments"></i> 댓글 <span id="commentCount" class="text-blue-600 dark:text-gemini-accent">0</span>
+                    </h3>
+
+                    <!-- Comment List -->
+                    <div id="commentsList" class="space-y-2 mb-4">
+                        <!-- Dynamic Comments -->
+                    </div>
+
+                    <!-- Add Comment Input -->
+                    <div class="flex gap-2">
+                        <input type="text" id="commentInput" placeholder="댓글(메모)을 입력하세요..." 
+                            class="flex-1 text-sm bg-gray-50 dark:bg-gemini-bg border border-gray-300 dark:border-gemini-border rounded-md px-3 py-2 focus:outline-none focus:border-blue-500 dark:focus:border-gemini-accent">
+                        <button onclick="addComment()" class="bg-gray-800 dark:bg-gemini-hover hover:bg-black dark:hover:bg-gemini-border text-white text-xs px-4 rounded-md font-medium transition">
+                            등록
+                        </button>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+    </main>
+
+    <!-- MODAL: WRITE / EDIT POST -->
+    <div id="writeModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gemini-card rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gemini-border overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-5 py-3.5 border-b border-gray-200 dark:border-gemini-border flex justify-between items-center bg-gray-50 dark:bg-gemini-bg">
+                <h3 id="modalHeaderTitle" class="font-bold text-gray-800 dark:text-gray-100 text-base">새 게시글 작성</h3>
+                <button onclick="closeWriteModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Body -->
+            <div class="p-5 overflow-y-auto space-y-4 flex-1">
+                <input type="hidden" id="editPostId" value="">
+
+                <!-- Category & Title -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select id="postCategorySelect" class="bg-gray-50 dark:bg-gemini-bg border border-gray-300 dark:border-gemini-border text-sm rounded-md p-2.5 focus:outline-none focus:border-blue-500 dark:focus:border-gemini-accent font-medium">
+                        <option value="자유">자유</option>
+                        <option value="메모">메모</option>
+                        <option value="정보">정보</option>
+                        <option value="미디어">미디어</option>
+                    </select>
+                    <input type="text" id="postTitleInput" placeholder="제목을 입력하세요" class="flex-1 bg-gray-50 dark:bg-gemini-bg border border-gray-300 dark:border-gemini-border text-sm rounded-md p-2.5 focus:outline-none focus:border-blue-500 dark:focus:border-gemini-accent font-medium">
+                </div>
+
+                <!-- Textarea -->
+                <div>
+                    <textarea id="postContentInput" rows="7" placeholder="내용을 작성하세요..." class="w-full bg-gray-50 dark:bg-gemini-bg border border-gray-300 dark:border-gemini-border text-sm rounded-md p-3 focus:outline-none focus:border-blue-500 dark:focus:border-gemini-accent resize-y"></textarea>
+                </div>
+
+                <!-- Media Uploader (Images & Videos) -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gemini-textMuted mb-2">사진 및 동영상 첨부 (여러 파일 선택 가능)</label>
+                    <div id="dropZone" onclick="document.getElementById('mediaFileInput').click()" class="border-2 border-dashed border-gray-300 dark:border-gemini-border hover:border-blue-500 dark:hover:border-gemini-accent rounded-lg p-4 text-center cursor-pointer transition bg-gray-50 dark:bg-gemini-bg">
+                        <i class="fa-solid fa-photo-film text-2xl text-gray-400 dark:text-gemini-textMuted mb-1"></i>
+                        <p class="text-xs text-gray-500 dark:text-gemini-textMuted">클릭하거나 사진 및 동영상을 드래그하여 추가하세요</p>
+                        <input type="file" id="mediaFileInput" accept="image/*,video/*" multiple class="hidden" onchange="handleMediaFiles(this.files)">
+                    </div>
+
+                    <!-- Media Previews -->
+                    <div id="mediaPreviewContainer" class="flex flex-wrap gap-2 mt-3">
+                        <!-- Dynamic Previews -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 py-3 border-t border-gray-200 dark:border-gemini-border flex justify-end space-x-2 bg-gray-50 dark:bg-gemini-bg">
+                <button onclick="closeWriteModal()" class="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gemini-hover rounded-md transition">취소</button>
+                <button onclick="savePost()" class="px-5 py-2 text-xs font-medium bg-blue-600 hover:bg-blue-700 dark:bg-gemini-accent dark:hover:bg-blue-300 text-white dark:text-gray-900 rounded-md transition shadow-sm">게시물 등록</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX MODAL FOR IMAGE ZOOM -->
+    <div id="lightboxModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 hidden" onclick="closeLightbox()">
+        <img id="lightboxImg" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="" alt="Zoomed image">
+        <button class="absolute top-4 right-4 text-white text-2xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. INDEXEDDB DATABASE SETUP ---
+        const DB_NAME = 'MyArcaGeminiDB';
+        const DB_VERSION = 1;
+        let db;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = (e) => reject("IndexedDB Error: " + e.target.errorCode);
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('posts')) {
+                        const store = db.createObjectStore('posts', { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('category', 'category', { unique: false });
+                        store.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
+                };
+            });
+        }
+
+        // DB Helpers
+        async function getAllPostsFromDB() {
+            return new Promise((resolve) => {
+                const tx = db.transaction('posts', 'readonly');
+                const store = tx.objectStore('posts');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result.sort((a, b) => b.createdAt - a.createdAt));
+            });
+        }
+
+        async function getPostFromDB(id) {
+            return new Promise((resolve) => {
+                const tx = db.transaction('posts', 'readonly');
+                const store = tx.objectStore('posts');
+                const request = store.get(Number(id));
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        async function savePostToDB(post) {
+            return new Promise((resolve) => {
+                const tx = db.transaction('posts', 'readwrite');
+                const store = tx.objectStore('posts');
+                const request = store.put(post);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        async function deletePostFromDB(id) {
+            return new Promise((resolve) => {
+                const tx = db.transaction('posts', 'readwrite');
+                const store = tx.objectStore('posts');
+                const request = store.delete(Number(id));
+                request.onsuccess = () => resolve();
+            });
+        }
+
+        // --- 2. GLOBAL APP STATE ---
+        const categories = ['전체', '자유', '메모', '정보', '미디어'];
+        let currentCategory = '전체';
+        let currentSearchQuery = '';
+        let currentPostId = null;
+        let tempMediaList = []; // Stores objects: { type: 'image'|'video', data: Base64 }
+
+        // --- 3. UI INITIALIZATION ---
+        window.onload = async () => {
+            await initDB();
+            renderCategoryTabs();
+            await loadPostsList();
+            setupDragAndDrop();
+        };
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            container.innerHTML = categories.map(cat => `
+                <button onclick="setCategory('${cat}')" 
+                    class="px-3 py-1 text-xs rounded-full font-medium whitespace-nowrap transition ${
+                        currentCategory === cat 
+                        ? 'bg-blue-600 dark:bg-gemini-accent text-white dark:text-gray-900' 
+                        : 'bg-gray-100 dark:bg-gemini-bg text-gray-600 dark:text-gemini-textMuted hover:bg-gray-200 dark:hover:bg-gemini-hover'
+                    }">
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            renderCategoryTabs();
+            loadPostsList();
+        }
+
+        function handleSearch() {
+            currentSearchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+            loadPostsList();
+        }
+
+        function showView(viewName) {
+            document.getElementById('listView').classList.toggle('hidden', viewName !== 'list');
+            document.getElementById('detailView').classList.toggle('hidden', viewName !== 'detail');
+            if (viewName === 'list') {
+                loadPostsList();
+            }
+        }
+
+        // --- 4. POST LIST RENDER ---
+        async function loadPostsList() {
+            let posts = await getAllPostsFromDB();
+
+            // Category Filter
+            if (currentCategory !== '전체') {
+                posts = posts.filter(p => p.category === currentCategory);
+            }
+
+            // Search Filter
+            if (currentSearchQuery) {
+                posts = posts.filter(p => 
+                    p.title.toLowerCase().includes(currentSearchQuery) || 
+                    p.content.toLowerCase().includes(currentSearchQuery)
+                );
+            }
+
+            document.getElementById('postCount').innerText = posts.length;
+            const listEl = document.getElementById('postsList');
+            const emptyEl = document.getElementById('emptyState');
+
+            if (posts.length === 0) {
+                listEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            listEl.innerHTML = posts.map(post => {
+                const dateStr = formatDate(post.createdAt);
+                
+                // Count media types
+                const mediaItems = post.media || [];
+                const imgCount = mediaItems.filter(m => m.type === 'image').length;
+                const videoCount = mediaItems.filter(m => m.type === 'video').length;
+                const commentCount = post.comments ? post.comments.length : 0;
+
+                return `
+                    <div onclick="openPostDetail(${post.id})" class="p-3.5 sm:p-4 hover:bg-gray-50 dark:hover:bg-gemini-hover cursor-pointer transition flex items-center justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[11px] font-semibold px-2 py-0.2 rounded bg-gray-100 dark:bg-gemini-hover text-blue-600 dark:text-gemini-accent border border-gray-200 dark:border-gemini-border">${escapeHtml(post.category)}</span>
+                                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">${escapeHtml(post.title)}</h3>
+                                ${imgCount > 0 ? `<span class="text-xs text-blue-500 dark:text-gemini-accent font-medium flex items-center gap-0.5"><i class="fa-regular fa-image"></i> ${imgCount}</span>` : ''}
+                                ${videoCount > 0 ? `<span class="text-xs text-purple-400 font-medium flex items-center gap-0.5"><i class="fa-solid fa-circle-play"></i> ${videoCount}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-gray-400 dark:text-gemini-textMuted flex items-center gap-3">
+                                <span>${dateStr}</span>
+                                ${commentCount > 0 ? `<span><i class="fa-regular fa-comment mr-1"></i>${commentCount}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- 5. POST DETAIL VIEW ---
+        async function openPostDetail(id) {
+            const post = await getPostFromDB(id);
+            if (!post) return;
+
+            currentPostId = id;
+            document.getElementById('detailTitle').innerText = post.title;
+            document.getElementById('detailCategory').innerText = post.category;
+            document.getElementById('detailDate').innerText = formatDate(post.createdAt, true);
+            document.getElementById('detailContent').innerText = post.content;
+
+            // Render Media (Images & Videos)
+            const mediaContainer = document.getElementById('detailMediaContainer');
+            if (post.media && post.media.length > 0) {
+                mediaContainer.innerHTML = post.media.map(item => {
+                    if (item.type === 'video') {
+                        return `
+                            <div class="rounded-lg overflow-hidden border border-gray-200 dark:border-gemini-border bg-black">
+                                <video src="${item.data}" controls class="w-full max-h-[600px] object-contain"></video>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="rounded-lg overflow-hidden border border-gray-200 dark:border-gemini-border bg-black/5 dark:bg-black/20">
+                                <img src="${item.data}" onclick="openLightbox('${item.data}')" class="w-full max-h-[600px] object-contain cursor-zoom-in hover:opacity-95 transition" alt="게시글 미디어">
+                            </div>
+                        `;
+                    }
+                }).join('');
+            } else {
+                mediaContainer.innerHTML = '';
+            }
+
+            // Render Comments
+            renderComments(post.comments || []);
+            showView('detail');
+        }
+
+        function renderComments(comments) {
+            document.getElementById('commentCount').innerText = comments.length;
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = comments.map((c, index) => `
+                <div class="bg-gray-50 dark:bg-gemini-bg p-2.5 rounded text-xs flex justify-between items-start gap-2 border border-transparent dark:border-gemini-border">
+                    <div class="flex-1">
+                        <div class="text-gray-400 dark:text-gemini-textMuted text-[10px] mb-0.5">${formatDate(c.createdAt, true)}</div>
+                        <p class="text-gray-800 dark:text-gray-200 leading-relaxed">${escapeHtml(c.text)}</p>
+                    </div>
+                    <button onclick="deleteComment(${index})" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        async function addComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text || !currentPostId) return;
+
+            const post = await getPostFromDB(currentPostId);
+            if (!post.comments) post.comments = [];
+            post.comments.push({ text, createdAt: Date.now() });
+
+            await savePostToDB(post);
+            input.value = '';
+            renderComments(post.comments);
+        }
+
+        async function deleteComment(index) {
+            const post = await getPostFromDB(currentPostId);
+            if (post && post.comments) {
+                post.comments.splice(index, 1);
+                await savePostToDB(post);
+                renderComments(post.comments);
+            }
+        }
+
+        // --- 6. WRITE / EDIT MODAL & MEDIA UPLOADER ---
+        function openWriteModal(isEdit = false) {
+            tempMediaList = [];
+            document.getElementById('mediaPreviewContainer').innerHTML = '';
+            document.getElementById('writeModal').classList.remove('hidden');
+
+            if (!isEdit) {
+                document.getElementById('modalHeaderTitle').innerText = '새 게시글 작성';
+                document.getElementById('editPostId').value = '';
+                document.getElementById('postTitleInput').value = '';
+                document.getElementById('postContentInput').value = '';
+                document.getElementById('postCategorySelect').value = '자유';
+            }
+        }
+
+        function closeWriteModal() {
+            document.getElementById('writeModal').classList.add('hidden');
+        }
+
+        async function editCurrentPost() {
+            if (!currentPostId) return;
+            const post = await getPostFromDB(currentPostId);
+            if (!post) return;
+
+            openWriteModal(true);
+            document.getElementById('modalHeaderTitle').innerText = '게시글 수정';
+            document.getElementById('editPostId').value = post.id;
+            document.getElementById('postTitleInput').value = post.title;
+            document.getElementById('postContentInput').value = post.content;
+            document.getElementById('postCategorySelect').value = post.category;
+
+            if (post.media) {
+                tempMediaList = [...post.media];
+                renderMediaPreviews();
+            }
+        }
+
+        async function deleteCurrentPost() {
+            if (!currentPostId) return;
+            if (confirm('이 게시글을 정말 삭제하시겠습니까?')) {
+                await deletePostFromDB(currentPostId);
+                showView('list');
+            }
+        }
+
+        function handleMediaFiles(files) {
+            Array.from(files).forEach(file => {
+                const isVideo = file.type.startsWith('video/');
+                const isImage = file.type.startsWith('image/');
+
+                if (!isImage && !isVideo) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    tempMediaList.push({
+                        type: isVideo ? 'video' : 'image',
+                        data: e.target.result
+                    });
+                    renderMediaPreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderMediaPreviews() {
+            const container = document.getElementById('mediaPreviewContainer');
+            container.innerHTML = tempMediaList.map((item, idx) => `
+                <div class="relative w-20 h-20 rounded border border-gray-300 dark:border-gemini-border overflow-hidden bg-black flex items-center justify-center group">
+                    ${item.type === 'video' 
+                        ? `<video src="${item.data}" class="w-full h-full object-cover opacity-80"></video>
+                           <i class="fa-solid fa-play absolute text-white text-xs bg-black/50 p-1 rounded-full"></i>`
+                        : `<img src="${item.data}" class="w-full h-full object-cover">`
+                    }
+                    <button onclick="removeTempMedia(${idx})" class="absolute top-1 right-1 bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeTempMedia(index) {
+            tempMediaList.splice(index, 1);
+            renderMediaPreviews();
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleMediaFiles(files);
+            });
+        }
+
+        async function savePost() {
+            const title = document.getElementById('postTitleInput').value.trim();
+            const content = document.getElementById('postContentInput').value.trim();
+            const category = document.getElementById('postCategorySelect').value;
+            const editId = document.getElementById('editPostId').value;
+
+            if (!title) {
+                alert('제목을 입력해주세요.');
+                return;
+            }
+
+            let post = {
+                title,
+                category,
+                content,
+                media: tempMediaList,
+                updatedAt: Date.now()
+            };
+
+            if (editId) {
+                const existing = await getPostFromDB(Number(editId));
+                post.id = Number(editId);
+                post.createdAt = existing.createdAt;
+                post.comments = existing.comments || [];
+            } else {
+                post.createdAt = Date.now();
+                post.comments = [];
+            }
+
+            const savedId = await savePostToDB(post);
+            closeWriteModal();
+
+            if (editId) {
+                openPostDetail(Number(editId));
+            } else {
+                showView('list');
+            }
+        }
+
+        // --- 7. UTILS ---
+        function openLightbox(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightboxModal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightboxModal').classList.add('hidden');
+        }
+
+        function formatDate(timestamp, showTime = false) {
+            const d = new Date(timestamp);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+
+            if (showTime) {
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            }
+            return `${year}-${month}-${day}`;
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
